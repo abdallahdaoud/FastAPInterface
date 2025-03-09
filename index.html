@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Management</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .form-container {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        button.delete-button {
+             background-color: #f44336;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+        .hidden {
+            display: none;
+        }
+        .error-message {
+            color: red;
+            margin-top: 5px;
+        }
+        .edit-form-container{
+             margin-top: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #f0f8ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Student Management</h1>
+
+    <h2>Students List</h2>
+    <table id="students-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Grade</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Student data will be loaded here -->
+        </tbody>
+    </table>
+
+    <div class="form-container">
+        <h2>Add New Student</h2>
+        <form id="add-student-form">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required><br>
+            <label for="grade">Grade:</label>
+            <input type="number" id="grade" name="grade" required><br>
+            <button type="submit">Add Student</button>
+            <div id="add-error" class="error-message hidden"></div>
+        </form>
+    </div>
+
+
+
+    <script>
+        const studentsTableBody = document.querySelector("#students-table tbody");
+        const addStudentForm = document.getElementById("add-student-form");
+        const addErrorDiv = document.getElementById("add-error");
+
+
+        // Fetch and display students
+        async function fetchStudents() {
+            try {
+                const response = await fetch("/students/");
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const students = await response.json();
+
+                if (Array.isArray(students)) { // Check if it's an array
+                    studentsTableBody.innerHTML = ""; // Clear existing rows
+                    students.forEach(student => {
+                        const row = studentsTableBody.insertRow();
+                        row.innerHTML = `
+                            <td>${student[0]}</td>
+                            <td>${student[1]}</td>
+                            <td>${student[2]}</td>
+                            <td>
+                                <button onclick="showEditForm(${student[0]}, '${student[1]}', ${student[2]})">Edit</button>
+                                <button class="delete-button" onclick="deleteStudent(${student[0]})">Delete</button>
+                            </td>
+                        `;
+                         addEditFormContainer(student[0]); // Add edit form container
+                    });
+                } else if (students.error) {
+                    console.error("Error from API:", students.error);
+                    alert(`Error fetching students: ${students.error}`);  // Display API error
+                } else {
+                     console.error("Unexpected response:", students);
+                    alert("An unexpected error occurred while fetching students.");
+                }
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                alert(`Failed to fetch students: ${error.message}`);  // Display detailed error
+            }
+        }
+
+
+      // Function to show the edit form
+        function showEditForm(id, name, grade) {
+            const editFormContainer = document.getElementById(`edit-form-container-${id}`);
+            editFormContainer.classList.remove('hidden');  //show the from
+
+             // Populate the form with current student data
+            document.getElementById(`edit-name-${id}`).value = name;
+            document.getElementById(`edit-grade-${id}`).value = grade;
+
+        }
+
+
+        //Add student
+        async function addStudent(name, grade) {
+            try {
+                const response = await fetch("/students/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ id: 0, name: name, grade: parseInt(grade) }), //id is arbitrary here
+                });
+
+                if (!response.ok) {
+                      const errorData = await response.json(); // Get error details from response
+                      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                fetchStudents(); // Refresh the student list
+                addStudentForm.reset();
+                addErrorDiv.classList.add("hidden");
+            } catch (error) {
+                console.error("Add student error:", error);
+                addErrorDiv.textContent = error.message;   // Use detailed error message
+                addErrorDiv.classList.remove("hidden");
+            }
+        }
+
+       // Delete student
+        async function deleteStudent(studentId) {
+            if (!confirm(`Are you sure you want to delete student with ID ${studentId}?`)) {
+                return;
+            }
+            try {
+                const response = await fetch(`/students/${studentId}`, {
+                    method: "DELETE",
+                });
+
+                 if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+                }
+
+                fetchStudents(); // Refresh the student list
+            } catch (error) {
+                console.error("Delete student error:", error);
+                alert(error.message);  // Display detailed error
+            }
+        }
+
+
+
+
+        // Event listener for adding a student
+        addStudentForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const name = document.getElementById("name").value;
+            const grade = document.getElementById("grade").value;
+            addStudent(name, grade);
+        });
+
+
+          // Function to add edit form
+        function addEditFormContainer(studentId) {
+            const row = studentsTableBody.querySelector(`tr:has(td:first-child:contains('${studentId}'))`);
+
+            if (!row) {
+               console.error("Row not found for student ID:", studentId);
+              return; // Exit if the row doesn't exist.
+            }
+            const editFormContainer = document.createElement('tr');
+             editFormContainer.innerHTML = `
+                <td colspan="4">
+                 <div id="edit-form-container-${studentId}" class="edit-form-container hidden">
+                    <h2>Edit Student</h2>
+                    <form id="edit-student-form-${studentId}">
+                        <label for="edit-name-${studentId}">Name:</label>
+                        <input type="text" id="edit-name-${studentId}" name="name"><br>
+
+                        <label for="edit-grade-${studentId}">Grade:</label>
+                        <input type="number" id="edit-grade-${studentId}" name="grade"><br>
+
+                        <button type="button" onclick="updateStudent(${studentId})">Save Changes</button>
+                         <button type="button" onclick="cancelEdit(${studentId})">Cancel</button>
+                         <div id="edit-error-${studentId}" class="error-message hidden"></div>
+                    </form>
+                </div>
+                </td>
+            `;
+
+             row.parentNode.insertBefore(editFormContainer, row.nextSibling);
+
+        }
+
+        // Function to update a student.
+        async function updateStudent(studentId) {
+
+            const editNameInput = document.getElementById(`edit-name-${studentId}`);
+            const editGradeInput = document.getElementById(`edit-grade-${studentId}`);
+            const editErrorDiv = document.getElementById(`edit-error-${studentId}`);
+
+            const updatedName = editNameInput.value;
+            const updatedGrade = parseInt(editGradeInput.value); // Convert to integer
+
+
+            try {
+                const response = await fetch(`/students/${studentId}`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ id: studentId, name: updatedName, grade: updatedGrade }),
+                });
+
+               if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+                }
+                fetchStudents(); // Refresh the list
+                 document.getElementById(`edit-form-container-${studentId}`).classList.add('hidden');
+                editErrorDiv.classList.add("hidden");
+
+            } catch (error) {
+                console.error("Update student error:", error);
+                 editErrorDiv.textContent = error.message; // Show detailed error
+                editErrorDiv.classList.remove("hidden");
+            }
+        }
+
+           // Function to cancel editing
+        function cancelEdit(studentId) {
+          const editFormContainer = document.getElementById(`edit-form-container-${studentId}`);
+          editFormContainer.classList.add('hidden');
+        }
+
+
+
+        // Initial fetch
+        fetchStudents();
+
+
+    </script>
+</body>
+</html>
