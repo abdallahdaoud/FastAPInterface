@@ -3,75 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Management</title>
+    <title>Employee Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto p-4 max-w-4xl">
-        <h1 class="text-2xl font-bold mb-6 text-gray-800">Student Management System</h1>
-        
-        <!-- Student Form -->
+        <h1 class="text-2xl font-bold mb-6 text-gray-800">Employee Management System</h1>
+
+        <!-- Employee Form -->
         <form onsubmit="handleFormSubmit(event)" class="bg-white p-6 rounded-lg shadow-md mb-8">
-            <input type="hidden" id="studentId">
+            <input type="hidden" id="employeeId">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Student Name</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Employee Name</label>
                     <input type="text" id="name" required
                            class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Grade</label>
-                    <input type="number" id="grade" required min="0" max="100"
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Salary</label>
+                    <input type="number" id="salary" required min="1"
                            class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
-            <button type="submit" id="submitButton" 
+            <button type="submit" id="submitButton"
                     class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-                Add Student
+                Add Employee
             </button>
         </form>
 
-        <!-- Students Table -->
+        <!-- Employees Table -->
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
             <table class="w-full">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salary</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                 </thead>
-                <tbody id="studentList" class="divide-y divide-gray-200">
-                    <!-- Students will be loaded here -->
+                <tbody id="employeeList" class="divide-y divide-gray-200">
+                    <!-- Employees will be loaded here -->
                 </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        // Load students when page loads
-        document.addEventListener('DOMContentLoaded', loadStudents);
+        document.addEventListener('DOMContentLoaded', loadEmployees);
 
-        async function loadStudents() {
+        async function loadEmployees() {
             try {
-                const response = await fetch('http://127.0.0.1:8000/students/');
-                const students = await response.json();
-                const tbody = document.getElementById('studentList');
+                const response = await fetch('http://127.0.0.1:8000/employees/');
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch employees: ${response.status} ${response.statusText}`); // More detailed error
+                }
+                const employees = await response.json();
+                const tbody = document.getElementById('employeeList');
                 tbody.innerHTML = '';
-                
-                students.forEach(student => {
+
+                employees.forEach(employee => {
                     const row = `
                         <tr>
-                            <td class="px-6 py-4 whitespace-nowrap">${student[0]}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${student[1]}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${student[2]}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${employee.id}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${employee.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${employee.salary}</td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <button onclick="editStudent(${student[0]}, '${student[1]}', ${student[2]})"
+                                <button onclick="editEmployee(${employee.id}, '${employee.name}', ${employee.salary})"
                                         class="text-blue-600 hover:text-blue-900 mr-4">
                                     Edit
                                 </button>
-                                <button onclick="deleteStudent(${student[0]})"
+                                <button onclick="deleteEmployee(${employee.id})"
                                         class="text-red-600 hover:text-red-900">
                                     Delete
                                 </button>
@@ -81,69 +83,75 @@
                     tbody.innerHTML += row;
                 });
             } catch (error) {
-                console.error('Error loading students:', error);
-                alert('Failed to load students. Check console for details.');
+                console.error('Error loading employees:', error);
+                alert('Failed to load employees: ' + error.message); // Show error message
             }
         }
 
         async function handleFormSubmit(event) {
             event.preventDefault();
-            const studentId = document.getElementById('studentId').value;
+            const employeeId = document.getElementById('employeeId').value;
             const name = document.getElementById('name').value;
-            const grade = document.getElementById('grade').value;
+            const salary = document.getElementById('salary').value;
 
-            const url = studentId 
-                ? `http://127.0.0.1:8000/students/${studentId}`
-                : 'http://127.0.0.1:8000/students/';
+            const url = employeeId
+                ? `http://127.0.0.1:8000/employees/${employeeId}`
+                : 'http://127.0.0.1:8000/employees/';
 
-            const method = studentId ? 'PUT' : 'POST';
+            const method = employeeId ? 'PUT' : 'POST';
 
             try {
                 const response = await fetch(url, {
                     method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        id: studentId ? parseInt(studentId) : 0,
+                        id: employeeId ? parseInt(employeeId) : undefined,
                         name,
-                        grade: parseInt(grade)
+                        salary: parseInt(salary)
                     })
                 });
 
-                if (!response.ok) throw new Error('Request failed');
+                if (!response.ok) {
+                   const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Request failed');
+                }
 
-                // Reset form
-                document.getElementById('studentId').value = '';
+                document.getElementById('employeeId').value = '';
                 document.getElementById('name').value = '';
-                document.getElementById('grade').value = '';
-                document.getElementById('submitButton').textContent = 'Add Student';
-                
-                await loadStudents();
+                document.getElementById('salary').value = '';
+                document.getElementById('submitButton').textContent = 'Add Employee';
+
+                await loadEmployees();
             } catch (error) {
                 console.error('Error:', error);
-                alert('Operation failed. Check console for details.');
+                alert('Operation failed: ' + error.message);
             }
         }
 
-        function editStudent(id, name, grade) {
-            document.getElementById('studentId').value = id;
+        function editEmployee(id, name, salary) {
+            document.getElementById('employeeId').value = id;
             document.getElementById('name').value = name;
-            document.getElementById('grade').value = grade;
-            document.getElementById('submitButton').textContent = 'Update Student';
+            document.getElementById('salary').value = salary;
+            document.getElementById('submitButton').textContent = 'Update Employee';
         }
 
-        async function deleteStudent(id) {
-            if (!confirm('Are you sure you want to delete this student?')) return;
-            
+        async function deleteEmployee(id) {
+            if (!confirm('Are you sure you want to delete this employee?')) return;
+
             try {
-                const response = await fetch(`http://127.0.0.1:8000/students/${id}`, {
+                const response = await fetch(`http://127.0.0.1:8000/employees/${id}`, {
                     method: 'DELETE'
                 });
-                
-                if (!response.ok) throw new Error('Delete failed');
-                await loadStudents();
+
+                 if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Delete failed');
+                }
+
+                await loadEmployees();
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to delete student. Check console for details.');
+                alert('Failed to delete employee: ' + error.message);
             }
         }
     </script>
